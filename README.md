@@ -1,1 +1,1 @@
-# instagram-post-scheduler
+# Instagram Post Scheduler
