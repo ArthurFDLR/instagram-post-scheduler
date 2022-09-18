@@ -41,6 +41,12 @@ class GraphAPI:
         )
         request_access_token_data = json.loads(request_access_token.content)
         # print(json.dumps(request_access_token_data, indent=2))
+        access_token_error = request_access_token_data.get("error", None)
+
+        if access_token_error is not None:
+            print(access_token_error)
+            return False
+
         access_token_data = request_access_token_data.get("data", None)
 
         if access_token_data is None:

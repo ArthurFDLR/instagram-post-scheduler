@@ -1,19 +1,20 @@
-import json, requests, boto3, os
+import json, requests, boto3, os, io
 from datetime import datetime, timedelta
-from pathlib import Path
-import pandas as pd
+# from pathlib import Path
+# import pandas as pd
 
 from graphapi import GraphAPI
-
+from postingqueue import PostingQueueS3CSV
 
 SNS_CLIENT = boto3.client('sns')
 S3_CLIENT = boto3.client('s3')
 S3_RES = boto3.resource('s3')
 
-S3_BUCKET_NAME = "instragram-post-scheduler"
-APP_PARAM_JSON_NAME = "app_parameters.json"
-GRAPHAPI_PARAM_JSON_NAME = "GraphAPI_parameters.json"
+APP_BUCKET = "instragram-post-scheduler"
+POSTING_QUEUE_KEY = "instragram_post_schedule.csv"
+GRAPHAPI_PARAMS_KEY = "graphapi_parameters.json"
 
+SNS_ARN = "arn:aws:sns:us-east-1:062411248643:instagram-post-scheduler-sns"
 
 def check_url_exists(url: str):
     """
@@ -33,42 +34,37 @@ def get_image_url(params_data):
     image_url += params_data["name_format"].replace("%name_variable%", str(params_data["name_variable"]))
     return image_url
 
-def send_sns(msg:str, subject:str="💥WARNING: ThisNightSkyDoesNotExist encountered a problem"):
+def send_sns(msg:str, subject:str="Your Instagram Post Scheduler encountered a problem 💥"):
     print(msg)
-    SNS_CLIENT.publish(
-        TargetArn=os.environ['snsARN'],
-        Subject=subject,
-        Message=msg
+    try:
+        SNS_CLIENT.publish(
+            TargetArn=SNS_ARN,
+            Subject=subject,
+            Message=msg
+        )
+    except Exception as e:
+        print(f"WARNING: send_sns failed: {e}")
+
+
+def post_queue_top(graph_api: GraphAPI, queue: PostingQueueS3CSV):
+
+    posting_data = queue.peek()
+
+    posting_status, request_container_data, request_publication_data = graph_api.post(
+        image_url=posting_data["image_url"],
+        caption=posting_data["caption"],
     )
-
-
-class QueueCSV():
-    def __init__(self, csv_queue_path: Path) -> None:
-        self.csv_queue_path = csv_queue_path
-        self.queue_df = pd.read_csv(csv_queue_path)
-
-    def peek(self):
-        if self._is_empty():
-            return None
-        top_row = self.queue_df[self.queue_df.status == False].iloc[0]
-        return dict(photo_url=top_row.photo_url, description=top_row.description)
+    if posting_status:
+        queue.pop()
+    else:
+        send_sns(msg=f"Content posting failed.")
+    return posting_data, request_container_data, request_publication_data
+        # return {
+        #     'statusCode': 500,
+        #     'body': json.dumps({"error": "Content posting failed"})
+        # }
     
-    def pop(self):
-        if self._is_empty():
-            return None
-        top_row_id = self.queue_df[self.queue_df.status == False].iloc[0].name
-        top_row = self.queue_df.iloc[top_row_id]
-        self.queue_df.at[top_row_id, 'status'] = True
-        self.queue_df.to_csv(self.csv_queue_path, index=False)
-        return dict(photo_url=top_row.photo_url, description=top_row.description)
 
-    def _is_empty(self):
-        return self.queue_df.status.all()
-
-    def __len__(self):
-        return int((~self.queue_df.status).sum())
-
-    
 def lambda_handler(event, context):
 
     event_type = event.get("type", "empty")
@@ -81,17 +77,10 @@ def lambda_handler(event, context):
 
     # Fetch GraphAPI parameters from S3 bucket
     graphapi_params = json.loads(S3_CLIENT.get_object(
-        Bucket=S3_BUCKET_NAME,
-        Key=GRAPHAPI_PARAM_JSON_NAME,
+        Bucket=APP_BUCKET,
+        Key=GRAPHAPI_PARAMS_KEY,
     )['Body'].read())
     print(json.dumps(graphapi_params, indent=4))
-
-    # # Fetch application parameters from S3 bucket
-    # app_params = json.loads(S3_CLIENT.get_object(
-    #     Bucket=S3_BUCKET_NAME,
-    #     Key=APP_PARAM_JSON_NAME,
-    # )['Body'].read())
-    # # print(json.dumps(app_params, indent=4))
 
     # Initilize GraphAPI
     try:
@@ -109,49 +98,34 @@ def lambda_handler(event, context):
     if remaining_time_token < timedelta(days=10):
         send_sns(msg=f"`access_token` expires on {graph_api.expiration_date}. Please renew the GraphAPI access token.")
 
-    # Check image availability for the 5 days to come
-    # for day_id in range(5):
-    #     if not check_url_exists(get_image_url(app_params['data'])):
-    #         send_sns(msg=f"The image database will run out of content in {day_id+1} day{'s' if day_id>0 else ''}.")
-    #         break
-    #     app_params['data']["name_variable"] = data_name_variable_update(app_params['data']["name_variable"])
+    # Initialize posting queue
+    posting_queue = PostingQueueS3CSV(
+        s3_client=S3_CLIENT,
+        s3_bucket=APP_BUCKET,
+        s3_key=POSTING_QUEUE_KEY,
+    )
 
+    # Check image availability for the week to come
+    if len(posting_queue) <= 7:
+        send_sns(msg=f"The image database will run out of content in {len(posting_queue)+1} day{'s' if len(posting_queue)>0 else ''}.")
 
-    # # Build image URL
-    # image_url = get_image_url(app_params["data"])
-    # # print("image_url:", image_url)
-
-    # # Post image
-    # posting_status, request_container_data, request_publication_data = graph_api.post(
-    #     image_url=image_url,
-    #     caption=app_params["caption"],
-    # )
-    # if not posting_status:
-    #     send_sns(msg=f"Content posting failed.")
-    #     return {
-    #         'statusCode': 500,
-    #         'body': json.dumps({"error": "Content posting failed"})
-    #     }
-
-    # # Update image counter in parameter file
-    # app_params['data']["name_variable"] = data_name_variable_update(app_params['data']["name_variable"])
-    # S3_RES.Object(S3_BUCKET_NAME, APP_PARAM_JSON_NAME).delete()
-    # S3_CLIENT.put_object(
-    #     Body=json.dumps(app_params),
-    #     Bucket=S3_BUCKET_NAME,
-    #     Key=APP_PARAM_JSON_NAME,
-    # )
-
+    # Publish new post
+    if event_type == "empty" and context is not None:
+        posting_data, request_container_data, request_publication_data = post_queue_top(graph_api, posting_queue)
+    else:
+        posting_data, request_container_data, request_publication_data = posting_queue.peek(), None, None
+        print(f"Called in test mode; not publishing image:\n{posting_data}")
     
     logger_body = {
         "GraphAPI parameters": graphapi_params,
-        # "Token availability": str(remaining_time_token),
-        # "Image published": str(image_url),
-        # "GraphAPI response": {
-        #     "Request container": request_container_data,
-        #     "Request publication": request_publication_data
-        # }
+        "Token availability": str(remaining_time_token),
+        "Post data": posting_data,
+        "GraphAPI response": {
+            "Request container": request_container_data,
+            "Request publication": request_publication_data
+        }
     }
+
     print(logger_body)
     return {
         'statusCode': 200,

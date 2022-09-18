@@ -36,3 +36,20 @@
     ```
 - Package the application i.e. run ./packaging.sh.
 - Upload into Lambda function (see ./dist/): Code > Upload from > .zip file
+  
+- Create SNS Topic (Type: Standard, Name: instagram-post-scheduler-sns, Display Name: Instagram Post Scheduler)
+- Create SNS Subscription (Topic ARN: from last step, protocol: Email); Confirm subscription in your emails inbox
+- Add policy to Lambda function to publish on SNS Topic (Name: instagram-post-scheduler-sns-publish):
+  ```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "sns:Publish",
+            "Resource": "arn:aws:sns:us-east-1:062411248643:instagram-post-scheduler-sns"
+        }
+    ]
+}
+  ```
+- Update SNS_ARN in script (see ./lambda_function)
