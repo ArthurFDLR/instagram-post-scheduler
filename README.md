@@ -53,3 +53,4 @@
 }
   ```
 - Update SNS_ARN in script (see ./lambda_function)
+- Setup Cron job: 0 18 */2 * ? *

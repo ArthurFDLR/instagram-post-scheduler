@@ -94,6 +94,7 @@ def lambda_handler(event, context):
         }
 
     # Check for expiration date
+    print(f"Token expiration date: {graph_api.expiration_date}")
     remaining_time_token = graph_api.expiration_date - datetime.now()
     if remaining_time_token < timedelta(days=10):
         send_sns(msg=f"`access_token` expires on {graph_api.expiration_date}. Please renew the GraphAPI access token.")
