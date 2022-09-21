@@ -14,7 +14,7 @@ APP_BUCKET = "instragram-post-scheduler"
 POSTING_QUEUE_KEY = "instragram_post_schedule.csv"
 GRAPHAPI_PARAMS_KEY = "graphapi_parameters.json"
 
-SNS_ARN = "arn:aws:sns:us-east-1:062411248643:instagram-post-scheduler-sns"
+SNS_ARN = None
 
 def check_url_exists(url: str):
     """
@@ -37,11 +37,14 @@ def get_image_url(params_data):
 def send_sns(msg:str, subject:str="Your Instagram Post Scheduler encountered a problem 💥"):
     print(msg)
     try:
-        SNS_CLIENT.publish(
-            TargetArn=SNS_ARN,
-            Subject=subject,
-            Message=msg
-        )
+        if SNS_ARN is not None:
+            SNS_CLIENT.publish(
+                TargetArn=SNS_ARN,
+                Subject=subject,
+                Message=msg
+            )
+        else:
+            print("SNS_ARN hasn't been set.")
     except Exception as e:
         print(f"WARNING: send_sns failed: {e}")
 

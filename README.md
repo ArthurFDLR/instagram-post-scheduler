@@ -59,7 +59,7 @@ For a detailed tutorial, follow [this article](https://levelup.gitconnected.com/
 }
 ```
 
-### Setup SNS notifier
+### [Optional] Setup SNS notifier
 
 - Create SNS Topic (Type: Standard, Name: instagram-post-scheduler-sns, Display Name: Instagram Post Scheduler)
 - Create SNS Subscription (Topic ARN: from last step, protocol: Email); Confirm subscription in your emails inbox
