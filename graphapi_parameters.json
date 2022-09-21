@@ -1,0 +1,8 @@
+{
+    "access_token": "...",
+    "client_id": "...",
+    "client_secret": "...",
+    "graph_domain": "https://graph.facebook.com",
+    "graph_version": "v15.0",
+    "instagram_account_id": "..."
+}
