@@ -59,16 +59,12 @@ def post_queue_top(graph_api: GraphAPI, queue: PostingQueueS3CSV):
     )
     if posting_status:
         queue.pop()
-    else:
-        send_sns(msg=f"Content posting failed.")
-    return posting_data, request_container_data, request_publication_data
-        # return {
-        #     'statusCode': 500,
-        #     'body': json.dumps({"error": "Content posting failed"})
-        # }
+    return posting_status, posting_data, request_container_data, request_publication_data
     
 
 def lambda_handler(event, context):
+
+    status_code = 200
 
     event_type = event.get("type", "empty")
     if event_type == "empty" and context is not None:
@@ -115,13 +111,15 @@ def lambda_handler(event, context):
 
     # Publish new post
     if event_type == "empty" and context is not None:
-        posting_data, request_container_data, request_publication_data = post_queue_top(graph_api, posting_queue)
+        posting_status, posting_data, request_container_data, request_publication_data = post_queue_top(graph_api, posting_queue)
+        if not posting_status:
+            send_sns(msg=f"Content posting failed.")
+            status_code = 500
     else:
         posting_data, request_container_data, request_publication_data = posting_queue.peek(), None, None
         print(f"Called in test mode; not publishing image:\n{posting_data}")
     
     logger_body = {
-        "GraphAPI parameters": graphapi_params,
         "Token availability": str(remaining_time_token),
         "Post data": posting_data,
         "GraphAPI response": {
@@ -132,6 +130,6 @@ def lambda_handler(event, context):
 
     print(logger_body)
     return {
-        'statusCode': 200,
+        'statusCode': status_code,
         'body': logger_body
     }

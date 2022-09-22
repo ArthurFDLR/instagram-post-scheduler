@@ -8,11 +8,13 @@ This repository includes all the source code and detailed steps to setup an AWS 
 
 For a detailed tutorial, follow [this article](https://levelup.gitconnected.com/automating-instagram-posts-with-python-and-instagram-graph-api-374f084b9f2b).
 
-1. Convert your Instagram profile to a Creator profile: 
+1. Convert your Instagram profile to a Business account: 
     
-    [***Instagram Help Center:*** *Set Up a Creator Account*](https://help.instagram.com/2358103564437429/?helpref=uf_share)
+    [***Instagram Help Center:*** *Set Up a Business Account*](https://help.instagram.com/2358103564437429/?helpref=uf_share)
 
-2. Add a Facebook Page to your Instagram Creator account:
+    **Note:** Instagram Creator accounts are not supported for content publishing.
+
+2. Add a Facebook Page to your Instagram Business account:
         
     [***Instagram Help Center:*** *How to Add or Change the Facebook Page Connected to Your Instagram Business Account*](https://help.instagram.com/399237934150902/?helpref=uf_share)
 
@@ -94,5 +96,10 @@ For a detailed tutorial, follow [this article](https://levelup.gitconnected.com/
     ```
 - Package the application i.e. run ./packaging.sh.
 - Upload into Lambda function (see ./dist/): Code > Upload from > .zip file
-
+- Increase memory to 256mb
 - Setup Cron job: 0 18 */2 * ? *
+
+
+## Notes
+
+Images shoulds be less than 8mb
