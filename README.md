@@ -2,6 +2,14 @@
 
 This repository includes all the source code and detailed steps to setup an AWS application using Meta's GraphAPI automatically publishing new post on Instagram on a regular basis.
 
+- [Instagram Post Scheduler](#instagram-post-scheduler)
+  - [Setup](#setup)
+    - [Generate a GraphAPI access token](#generate-a-graphapi-access-token)
+    - [Create S3 buckets](#create-s3-buckets)
+    - [[Optional] Setup SNS notifier](#optional-setup-sns-notifier)
+    - [Create Lambda function](#create-lambda-function)
+
+
 ## Setup
 
 ### Generate a GraphAPI access token
@@ -33,73 +41,113 @@ For a detailed tutorial, follow [this article](https://levelup.gitconnected.com/
 6. Complete [./graphapi_parameters.json](./graphapi_parameters.json) with your long-lived access token (`access_token`) and Instagram User ID (`instagram_account_id`) from from step 4, and your Instagram App key pair (`client_id` and `client_secret`) from your [Meta's developer dashboard](https://developers.facebook.com/) (App Dashboard > Products > Instagram > Basic Display).
 
 
-### Create application and media S3 buckets
+### Create S3 buckets
 
+- Create two AWS S3 buckets for this application:
+  - `instagram-post-scheduler`: A private bucket to hold your configuration file ([`./graphapi_parameters.json`](./graphapi_parameters.json)) and your posting schedule ([`./instragram_post_schedule.csv`](./instragram_post_schedule.csv));
+  - `instagram-post-scheduler-public`: A public bucket to hold your images;
 
-- Create private S3 Bucket 
-- Create public S3 Bucket
-  - Allow publicj during creation;
-  - Add permision:
+    *Note:* You'll certainly have to rename the buckets with a personal ID as bucket names must be globally unique across AWS. 
 
-```
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Sid": "AllowPublicRead",
-            "Effect": "Allow",
-            "Principal": {
-                "AWS": "*"
-            },
-            "Action": "s3:GetObject",
-            "Resource": [
-                "arn:aws:s3:::instagram-post-scheduler-public/*",
-                "arn:aws:s3:::instagram-post-scheduler-public"
-            ]
-        }
-    ]
-}
-```
+- Give public access to your S3 media Bucket with the following Bucket policy, remember to update the Bucket's ARN:
+  
+    ```
+    {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "AllowPublicRead",
+                "Effect": "Allow",
+                "Principal": {
+                    "AWS": "*"
+                },
+                "Action": "s3:GetObject",
+                "Resource": [
+                    "arn:aws:s3:::instagram-post-scheduler-public/*",
+                    "arn:aws:s3:::instagram-post-scheduler-public"
+                ]
+            }
+        ]
+    }
+    ```
+
+- Upload images you plan to publish to your public bucket
+
+    *Note:* Images should weigth less than 8Mb.
+
+- Populate the schedule table ([`./instagram_post_schedule.csv`](./instagram_post_schedule.csv)) with URL to images from your public bucket, a caption. Set all cells of the `satus` column to `FALSE`, the table will be updated by the Lambda function as scheduled post are published.
+
+- Upload [`./instagram_post_schedule.csv`](./instagram_post_schedule.csv) and [./graphapi_parameters.json](./graphapi_parameters.json) to your **private** bucket.
 
 ### [Optional] Setup SNS notifier
 
-- Create SNS Topic (Type: Standard, Name: instagram-post-scheduler-sns, Display Name: Instagram Post Scheduler)
-- Create SNS Subscription (Topic ARN: from last step, protocol: Email); Confirm subscription in your emails inbox
-- Add policy to Lambda function to publish on SNS Topic (Name: instagram-post-scheduler-sns-publish):
+If you want to receive an email alert when a scheduled publication fails, you have to setup an Simple Notification Service (SNS) notifier:
 
-```
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": "sns:Publish",
-            "Resource": "arn:aws:sns:us-east-1:062411248643:instagram-post-scheduler-sns"
-        }
-    ]
-}
-```
-
-- Update SNS_ARN in script (see ./lambda_function)
+- Create an SNS Topic:
+  - Type: Standard
+  - Name: instagram-post-scheduler-sns
+  - Display Name: Instagram Post Scheduler
+- Create an SNS Subscription:
+  - Topic ARN: from last step
+  - Protocol: Email
+- Update the global variable SNS_ARN with the ARN of your SNS Topic (see [`./src/lambda_function`](./src/lambda_function.py#L17))
 
 
 ### Create Lambda function
 
-- create Lambda function with Python runtime
+- Create new Lambda function:
+  - Type: Author from scratch
+  - Function name: instagram
+  - Runtime: Python 3.9
+  - Architecture: x86_64
 - add S3 permissions:
-    Configuration > Permissions > Role Name > Add permissions > Attach policy > Select AmazonS3FullAccess > Attach Policies
-- Create test case (Ctrl+Shift+C) with event JSON
+    
+    Configuration > Permissions > Role Name (click on name) > Add permissions > Attach policy > Select AmazonS3FullAccess > Attach Policies
+
+- Create test case with the following event JSON
+  
     ```
     {
         "type": "test"
     }
     ```
-- Package the application i.e. run ./packaging.sh.
-- Upload into Lambda function (see ./dist/): Code > Upload from > .zip file
-- Increase memory to 256mb
-- Setup Cron job: 0 18 */2 * ? *
 
+    **Note:** If you don't specify `"type": "test"`, the function will publish the next scheduled post.
 
-## Notes
+- Package the application:
+  
+    ```./packaging.sh```
 
-Images shoulds be less than 8mb
+- Upload the archived application (`./dist/<version.zip>`) to your Lambda function:
+    
+    Code > Upload from > .zip file
+
+- Increase memory to 256Mb
+
+    Configuration > General Configuration > Edit > Memory: 256 MB
+
+- Add trigger:
+    
+    Configuration > Triggers > Add trigger:
+    - Source: EventBridge (CloudWatch Events)
+    - Create new rule
+    - Rule name: instagram-post-scheduler-trigger
+    - Rule type: Schedule expression
+    - Schedule expression: `cron(15 10 * * ? *)` (i.e. 10:15 AM (UTC) every day)
+
+    **Note:** See [*Schedule expressions using rate or cron*](https://docs.aws.amazon.com/lambda/latest/dg/services-cloudwatchevents-expressions.html) to learn how to customize your schedule expression.
+
+- [Optional c.f. [Setup SNS notifier](#optional-setup-sns-notifier)] Add policy to publish on SNS Topic:
+
+    ```
+    {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Action": "sns:Publish",
+                "Resource": "arn:aws:sns:us-east-1:237694347:instagram-post-scheduler-sns"
+            }
+        ]
+    }
+    ```

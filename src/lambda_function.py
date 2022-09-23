@@ -1,4 +1,4 @@
-import json, requests, boto3, os, io
+import json, requests, boto3, traceback
 from datetime import datetime, timedelta
 # from pathlib import Path
 # import pandas as pd
@@ -14,7 +14,7 @@ APP_BUCKET = "instragram-post-scheduler"
 POSTING_QUEUE_KEY = "instragram_post_schedule.csv"
 GRAPHAPI_PARAMS_KEY = "graphapi_parameters.json"
 
-SNS_ARN = None
+SNS_TOPIC_ARN = None # SNS Topic ARN (e.g. "arn:aws:sns:us-east-1:237694347:instagram-post-scheduler-sns")
 
 def check_url_exists(url: str):
     """
@@ -85,8 +85,7 @@ def lambda_handler(event, context):
     try:
         graph_api = GraphAPI(graphapi_params)
     except Exception as e:
-        send_sns(msg="")
-        print(e)
+        send_sns(msg=f"GraphAPI initialization failed:\n{traceback.format_exc()}")
         return {
             'statusCode': 500,
             'body': json.dumps({"error": str(e)})
