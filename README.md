@@ -1,6 +1,10 @@
 # Instagram Post Scheduler
 
-This repository includes all the source code and detailed steps to setup an AWS application using Meta's GraphAPI, automatically publishing new content on Instagram regularly.
+<p align="center">
+    <img src="./.github/readme_header.png" alt="Banner" width="50%" style="border-radius: 5px;">
+</p>
+
+This repository includes all the source code and detailed steps to setup an AWS application using Meta's GraphAPI, automatically publishing new content on Instagram regularly. Have a look at my Instagram bot [@thisnightskydoesnotexist](https://www.instagram.com/thisnightskydoesnotexist/) to see what this application can do.
 
 - [Instagram Post Scheduler](#instagram-post-scheduler)
   - [Setup](#setup)
