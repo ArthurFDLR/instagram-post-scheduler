@@ -1,4 +1,5 @@
 import pandas as pd, io
+import numpy as np
 
 class PostingQueueS3CSV():
     def __init__(self, s3_client:str, s3_bucket:str, s3_key:str) -> None:
@@ -41,7 +42,7 @@ class PostingQueueS3CSV():
         if self._is_empty():
             return None
         top_row = self.queue_df[self.queue_df.status == False].iloc[0]
-        return dict(image_url=top_row.image_url, caption=top_row.caption)
+        return dict(image_url=top_row.image_url, caption=top_row.caption if not np.isnan(top_row.caption) else "")
     
     def pop(self):
         if self._is_empty():
@@ -50,7 +51,7 @@ class PostingQueueS3CSV():
         top_row = self.queue_df.iloc[top_row_id]
         self.queue_df.at[top_row_id, 'status'] = True
         self._push_csv()
-        return dict(image_url=top_row.image_url, caption=top_row.caption)
+        return dict(image_url=top_row.image_url, caption=top_row.caption if not np.isnan(top_row.caption) else "")
 
     def _is_empty(self):
         return self.queue_df.status.all()

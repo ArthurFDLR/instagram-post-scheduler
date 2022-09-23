@@ -44,7 +44,7 @@ For a detailed tutorial, follow [this article](https://levelup.gitconnected.com/
 ### Create S3 buckets
 
 - Create two AWS S3 buckets for this application:
-  - `instagram-post-scheduler`: A private bucket to hold your configuration file ([`./graphapi_parameters.json`](./graphapi_parameters.json)) and your posting schedule ([`./instragram_post_schedule.csv`](./instragram_post_schedule.csv));
+  - `instagram-post-scheduler`: A private bucket to hold your configuration file ([`./graphapi_parameters.json`](./graphapi_parameters.json)) and your posting schedule ([`./instagram_post_schedule.csv`](./instagram_post_schedule.csv));
   - `instagram-post-scheduler-public`: A public bucket to hold your images;
 
     *Note:* You'll certainly have to rename the buckets with a personal ID as bucket names must be globally unique across AWS. 
@@ -122,9 +122,9 @@ If you want to receive an email alert when a scheduled publication fails, you ha
     
     Code > Upload from > .zip file
 
-- Increase memory to 256Mb
+- Increase memory to 256Mb and timeout to 6 seconds:
 
-    Configuration > General Configuration > Edit > Memory: 256 MB
+    Configuration > General Configuration > Edit > Memory: 256 MB | Timeout: 6 sec
 
 - Add trigger:
     

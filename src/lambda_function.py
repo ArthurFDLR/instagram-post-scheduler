@@ -10,8 +10,8 @@ SNS_CLIENT = boto3.client('sns')
 S3_CLIENT = boto3.client('s3')
 S3_RES = boto3.resource('s3')
 
-APP_BUCKET = "instragram-post-scheduler"
-POSTING_QUEUE_KEY = "instragram_post_schedule.csv"
+APP_BUCKET = "instagram-post-scheduler"
+POSTING_QUEUE_KEY = "instagram_post_schedule.csv"
 GRAPHAPI_PARAMS_KEY = "graphapi_parameters.json"
 
 SNS_TOPIC_ARN = None # SNS Topic ARN (e.g. "arn:aws:sns:us-east-1:237694347:instagram-post-scheduler-sns")
