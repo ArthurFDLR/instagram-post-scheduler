@@ -2,7 +2,8 @@
     "access_token": "...",
     "client_id": "...",
     "client_secret": "...",
+    "instagram_account_id": "...",
     "graph_domain": "https://graph.facebook.com",
     "graph_version": "v15.0",
-    "instagram_account_id": "..."
+    "sns_topic_arn": "..."
 }

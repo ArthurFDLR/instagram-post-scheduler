@@ -14,8 +14,6 @@ APP_BUCKET = "instagram-post-scheduler"
 POSTING_QUEUE_KEY = "instagram_post_schedule.csv"
 GRAPHAPI_PARAMS_KEY = "graphapi_parameters.json"
 
-SNS_TOPIC_ARN = None # SNS Topic ARN (e.g. "arn:aws:sns:us-east-1:237694347:instagram-post-scheduler-sns")
-
 def check_url_exists(url: str):
     """
     Checks if a url exists
@@ -34,12 +32,12 @@ def get_image_url(params_data):
     image_url += params_data["name_format"].replace("%name_variable%", str(params_data["name_variable"]))
     return image_url
 
-def send_sns(msg:str, subject:str="Your Instagram Post Scheduler encountered a problem 💥"):
+def send_sns(msg:str, sns_topic_arn:str, subject:str="Your Instagram Post Scheduler encountered a problem 💥"):
     print(msg)
     try:
-        if SNS_ARN is not None:
+        if sns_topic_arn is not None:
             SNS_CLIENT.publish(
-                TargetArn=SNS_ARN,
+                TargetArn=sns_topic_arn,
                 Subject=subject,
                 Message=msg
             )
@@ -80,12 +78,13 @@ def lambda_handler(event, context):
         Key=GRAPHAPI_PARAMS_KEY,
     )['Body'].read())
     print(json.dumps(graphapi_params, indent=4))
+    sns_topic_arn = graphapi_params.get("sns_topic_arn", None)
 
     # Initilize GraphAPI
     try:
         graph_api = GraphAPI(graphapi_params)
     except Exception as e:
-        send_sns(msg=f"GraphAPI initialization failed:\n{traceback.format_exc()}")
+        send_sns(sns_topic_arn=sns_topic_arn, msg=f"GraphAPI initialization failed:\n{traceback.format_exc()}")
         return {
             'statusCode': 500,
             'body': json.dumps({"error": str(e)})
@@ -95,7 +94,7 @@ def lambda_handler(event, context):
     print(f"Token expiration date: {graph_api.expiration_date}")
     remaining_time_token = graph_api.expiration_date - datetime.now()
     if remaining_time_token < timedelta(days=10):
-        send_sns(msg=f"`access_token` expires on {graph_api.expiration_date}. Please renew the GraphAPI access token.")
+        send_sns(sns_topic_arn=sns_topic_arn, msg=f"`access_token` expires on {graph_api.expiration_date}. Please renew the GraphAPI access token.")
 
     # Initialize posting queue
     posting_queue = PostingQueueS3CSV(
@@ -105,19 +104,30 @@ def lambda_handler(event, context):
     )
 
     # Check image availability for the week to come
-    if len(posting_queue) <= 7:
-        send_sns(msg=f"The image database will run out of content in {len(posting_queue)+1} day{'s' if len(posting_queue)>0 else ''}.")
+    if len(posting_queue) == 0:
+        send_sns(sns_topic_arn=sns_topic_arn, msg=f"Your posting schedule is empty, please update s3://{APP_BUCKET}/{POSTING_QUEUE_KEY}.")
+        return {
+            'statusCode': 500,
+            'body': "Empty posting queue"
+        }
+    if len(posting_queue) <= 4:
+        send_sns(sns_topic_arn=sns_topic_arn, msg=f"Only {len(posting_queue)+1} posting{'s' if len(posting_queue)>0 else ''} remaining scheduled in s3://{APP_BUCKET}/{POSTING_QUEUE_KEY}.")
+
 
     # Publish new post
     if event_type == "empty" and context is not None:
         posting_status, posting_data, request_container_data, request_publication_data = post_queue_top(graph_api, posting_queue)
         if not posting_status:
-            send_sns(msg=f"Content posting failed.")
+            send_sns(sns_topic_arn=sns_topic_arn, msg=f"Content posting failed.")
             status_code = 500
     else:
         posting_data, request_container_data, request_publication_data = posting_queue.peek(), None, None
-        print(f"Called in test mode; not publishing image:\n{posting_data}")
-    
+        send_sns(
+            sns_topic_arn=sns_topic_arn,
+            msg=f"You just called your Instagram Post Scheduler in test mode. The following posting is scheduled for publication:\n{json.dumps(posting_data, indent=4)}",
+            subject="Instagram Post Scheduler testing 🚀"
+        )
+
     logger_body = {
         "Token availability": str(remaining_time_token),
         "Post data": posting_data,

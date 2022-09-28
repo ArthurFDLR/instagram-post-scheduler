@@ -126,9 +126,9 @@ If you want to receive an email alert when a scheduled publication fails, you ha
     
     Code > Upload from > .zip file
 
-- Increase memory to 256Mb and timeout to 6 seconds:
+- Increase memory to 512 MB and timeout to 6 seconds:
 
-    Configuration > General Configuration > Edit > Memory: 256 MB | Timeout: 6 sec
+    Configuration > General Configuration > Edit > Memory: 512 MB | Timeout: 6 sec
 
 - Add trigger:
     

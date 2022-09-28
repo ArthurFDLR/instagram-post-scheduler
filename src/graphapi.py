@@ -1,23 +1,6 @@
-# Import Libraries
-
 import json
 import requests
 from datetime import datetime, timedelta
-
-
-# class GraphAPIParameters(TypedDict):
-#     access_token: str
-#     client_id: str
-#     client_secret: str
-#     graph_domain: str
-#     graph_version: str
-#     page_id: str
-#     instagram_account_id: str
-#     ig_username: str
-
-# def check_GraphAPIParameters(graphapi_parameters: GraphAPIParameters):
-#     key_checks = [isinstance(graphapi_parameters.get(key, None), type_hint) for key, type_hint in GraphAPIParameters.__annotations__.items()]
-#     return all(key_checks)
 
 
 class GraphAPI:
