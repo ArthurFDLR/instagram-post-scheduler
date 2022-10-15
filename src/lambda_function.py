@@ -1,7 +1,5 @@
-import json, requests, boto3, traceback
+import os, json, requests, boto3, traceback
 from datetime import datetime, timedelta
-# from pathlib import Path
-# import pandas as pd
 
 from graphapi import GraphAPI
 from postingqueue import PostingQueueS3CSV
@@ -10,7 +8,7 @@ SNS_CLIENT = boto3.client('sns')
 S3_CLIENT = boto3.client('s3')
 S3_RES = boto3.resource('s3')
 
-APP_BUCKET = "chlosmonaute-instagram-post-scheduler" # AWS S3 bucket name - changed from initial branch
+APP_BUCKET = os.environ['APP_BUCKET'] # "instagram-post-scheduler"
 POSTING_QUEUE_KEY = "instagram_post_schedule.csv"
 GRAPHAPI_PARAMS_KEY = "graphapi_parameters.json"
 

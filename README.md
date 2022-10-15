@@ -12,6 +12,7 @@ This repository includes all the source code and detailed steps to setup an AWS 
     - [Create S3 buckets](#create-s3-buckets)
     - [[Optional] Setup SNS notifier](#optional-setup-sns-notifier)
     - [Create Lambda function](#create-lambda-function)
+  - [To-do](#to-do)
 
 
 ## Setup
@@ -118,17 +119,21 @@ If you want to receive an email alert when a scheduled publication fails, you ha
 
     **Note:** If you don't specify `"type": "test"`, the function will publish the next scheduled post.
 
-- Package the application:
+- Download the distribution archive from the latest [Github release](https://github.com/ArthurFDLR/instagram-post-scheduler/releases), or package the application from source:
   
     ```./packaging.sh```
 
-- Upload the archived application (`./dist/<version.zip>`) to your Lambda function:
+- Upload the archived application (`./dist/<version.zip>` if packaged from source) to your Lambda function:
     
     Code > Upload from > .zip file
 
 - Increase memory to 512 MB and timeout to 6 seconds:
 
     Configuration > General Configuration > Edit > Memory: 512 MB | Timeout: 6 sec
+
+- Create the `APP_BUCKET` environment variable with the name of the private bucket created in [*Create S3 buckets*](#create-s3-buckets) (e.g. `instagram-post-scheduler`):
+
+    Configuration > Environment Variables > Edit > Add environment variable
 
 - Add trigger:
     
@@ -156,10 +161,9 @@ If you want to receive an email alert when a scheduled publication fails, you ha
     }
     ```
 
-## Projected contributions
+## To-do
 
-- [X] Fix np.isnan to pd.isnull when checking strings
-- [ ] Modify caption planning to include emojis/line changes
-- [ ] Tagging place
-- [ ] Tagging people
-- [ ] Carrousels
+- [ ] Improve posting caption encoding to support emojis/line changes;
+- [ ] Support places tagging;
+- [ ] Support users tagging;
+- [ ] Support carrousels posting;
