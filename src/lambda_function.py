@@ -10,7 +10,7 @@ SNS_CLIENT = boto3.client('sns')
 S3_CLIENT = boto3.client('s3')
 S3_RES = boto3.resource('s3')
 
-APP_BUCKET = "instagram-post-scheduler"
+APP_BUCKET = "chlosmonaute-instagram-post-scheduler" # AWS S3 bucket name - changed from initial branch
 POSTING_QUEUE_KEY = "instagram_post_schedule.csv"
 GRAPHAPI_PARAMS_KEY = "graphapi_parameters.json"
 

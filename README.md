@@ -155,3 +155,11 @@ If you want to receive an email alert when a scheduled publication fails, you ha
         ]
     }
     ```
+
+## Projected contributions
+
+- [X] Fix np.isnan to pd.isnull when checking strings
+- [ ] Modify caption planning to include emojis/line changes
+- [ ] Tagging place
+- [ ] Tagging people
+- [ ] Carrousels
